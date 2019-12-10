@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -110,11 +109,8 @@ func (p *Datastore) Create(ip string, timestamp time.Time) error {
 		}
 	}
 	log.Printf("Trying to insert %s with %#v", ip, timestamp)
-	err := p.db.QueryRow(`INSERT INTO access(ip, access_time)
+	rows := p.db.QueryRow(`INSERT INTO access(ip, access_time)
 	VALUES($1, $2)`, ip, timestamp)
-	if err != nil {
-		log.Printf("Create error %#+v", err)
-		return fmt.Errorf("datastore Create returned error: %v", err)
-	}
+	log.Printf("Rows inserted %#+v", rows)
 	return nil
 }
