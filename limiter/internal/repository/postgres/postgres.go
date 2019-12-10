@@ -80,7 +80,8 @@ func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bo
 	// Get a count of the number of connections stored in the DB for this ip, between now and now - timespan
 	count := 0
 	var accessTime time.Time
-	err := p.db.QueryRow(`SELECT MIN(access.access_time), count(*) FROM access WHERE access.ip = $1 and access.access_time > (Now() - $2) LIMIT 1`, ip, timespan).Scan(&accessTime, &count)
+	// current_timestamp-interval '1 hour'
+	err := p.db.QueryRow(`SELECT MIN(access.access_time), count(*) FROM access WHERE access.ip = $1 AND access.access_time > CURRENT_TIMESTAMP- $2 * INTERVAL '1 SECOND' LIMIT 1`, ip, timespan.Seconds()).Scan(&accessTime, &count)
 	if err != nil {
 		return true, time.Hour, err
 	}
