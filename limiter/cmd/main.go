@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -115,26 +114,30 @@ func rateLimitandForward(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("CheckReachedLimit returned error %v, unable to continue", err)
 	}
+	w.Header().Set("Content-Type", "application/json")
+	var response []byte
+	var jerr error
 	if reject {
 		log.Printf("Rejecting with vals wait: %v", wait)
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
-		response, jerr := json.Marshal(map[string]string{"message": fmt.Sprintf("Rate limit exceeded. Try again in %f seconds", wait)})
+		response, jerr = json.Marshal(map[string]string{"message": fmt.Sprintf("Rate limit exceeded. Try again in %f seconds", wait)})
 
 		if jerr != nil {
 			log.Printf("Unable to marshal with error %v", jerr)
 		}
-		_, err = w.Write(response)
-		if err != nil {
-			// log the error
-			log.Printf("writing response generated error: %v", err)
+	} else {
+		log.Printf("Remote address: %#+v", r.RemoteAddr)
+		w.WriteHeader(http.StatusOK)
+		// httputil.NewSingleHostReverseProxy(url).ServeHTTP(res, req)
+		response, jerr = json.Marshal(map[string]string{"message": "Just a message to let you know everything is fine. In normal instances this code would reverse proxy successful connections"})
+		if jerr != nil {
+			log.Printf("Unable to marshal with error %v", jerr)
 		}
 	}
-	log.Printf("Remote address: %#+v", r.RemoteAddr)
-	// httputil.NewSingleHostReverseProxy(url).ServeHTTP(res, req)
-	_, err = io.WriteString(w, "Hello World!")
-
+	// Write to the client
+	_, err = w.Write(response)
 	if err != nil {
-		log.Printf("Error writing out, %v", err)
+		// log the error
+		log.Printf("writing response generated error: %v", err)
 	}
 }
