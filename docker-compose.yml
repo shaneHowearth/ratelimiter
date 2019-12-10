@@ -12,7 +12,9 @@ services:
         environment:
             - DBURI=postgres://accesswriter:hu8jmn3@accessdb:5432/access_postgres_db?sslmode=disable
             - PORTNUM=80
-            - LIMIT=10
-            - TIMESPAN=5m
+            - LIMIT=100
+            - TIMESPAN=1h
+            # - LIMIT=10        # Reduced limit to make testing easier 
+            # - TIMESPAN=5m     # Reduced limit, note h, m, or s supported
         ports:
             - "80:80"
