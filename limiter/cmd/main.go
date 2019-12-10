@@ -64,6 +64,7 @@ func main() {
 	}
 
 	// HTTP server with graceful shutdown
+	log.Print("Starting HTTP server")
 	portNum, found := os.LookupEnv("PORTNUM")
 	if !found {
 		log.Printf("No PORTNUM set, am defaulting to '80'")
@@ -94,17 +95,21 @@ func main() {
 func rateLimitandForward(w http.ResponseWriter, r *http.Request) {
 	// The "/" matches anything not handled elsewhere. If it's not the root
 	// then report not found.
+	log.Print("rateLimitandForward")
 	if r.URL.Path != "/" {
+		log.Printf("Path not found %s", r.URL.Path)
 		http.NotFound(w, r)
 		return
 	}
+
+	log.Print("Checking")
 	reject, wait, err := rl.CheckReachedLimit(r.RemoteAddr)
 
 	if err != nil {
 		log.Fatalf("CheckReachedLimit returned error %v, unable to continue", err)
 	}
 	if reject {
-
+		log.Printf("Rejecting with vals wait: %v", wait)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
 		response, jerr := json.Marshal(map[string]string{"message": fmt.Sprintf("Rate limit exceeded. Try again in %d seconds", wait)})
