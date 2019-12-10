@@ -55,11 +55,11 @@ func (p *Datastore) Connect() (err error) {
 }
 
 // CreateAndCheck -
-func (p *Datastore) CreateAndCheck(ip string, limit int, timestamp time.Time, timespan time.Duration) (bool, time.Duration, error) {
+func (p *Datastore) CreateAndCheck(ip string, limit int, timestamp time.Time, timespan time.Duration) (bool, float64, error) {
 	// Check if the limit has been reached
 	over, minWait, err := p.ReachedMax(ip, limit, timespan)
 	if err != nil {
-		return true, time.Hour, err
+		return true, float64(time.Hour.Seconds()), err
 	}
 	// Add this connection attempt to the DB
 	if !over {
@@ -69,7 +69,7 @@ func (p *Datastore) CreateAndCheck(ip string, limit int, timestamp time.Time, ti
 }
 
 // ReachedMax -
-func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bool, time.Duration, error) {
+func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bool, float64, error) {
 	if p.db == nil {
 		if perr := p.Connect(); perr != nil {
 			log.Panic("Unable to connect to database, dying")
@@ -79,23 +79,27 @@ func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bo
 	log.Printf("Looking for %v", timespan)
 	// Get a count of the number of connections stored in the DB for this ip, between now and now - timespan
 	count := 0
-	var accessTime time.Time
+	// var accessTime time.Time
+	var accessTime sql.NullInt64
 	// current_timestamp-interval '1 hour'
-	err := p.db.QueryRow(`SELECT DISTINCT(access.access_time), count(*) FROM access WHERE access.ip = $1 AND access.access_time > CURRENT_TIMESTAMP- $2 * INTERVAL '1 SECOND' LIMIT 1`, ip, timespan.Seconds()).Scan(&accessTime, &count)
+	err := p.db.QueryRow(`SELECT (CURRENT_TIMESTAMP - MIN(access.access_time)), count(*) FROM access WHERE access.ip = $1 AND access.access_time > CURRENT_TIMESTAMP- $2 * INTERVAL '1 SECOND' LIMIT 1`, ip, timespan.Seconds()).Scan(&accessTime, &count)
 	if err != nil {
 		log.Printf("Query generated error %v", err)
-		return true, time.Hour, err
+		return true, float64(time.Hour.Seconds()), err
 	}
 
-	log.Printf("Returned count %#v, wait %d, err %v", count, accessTime, err)
+	log.Printf("Returned count %#v, wait %#v, err %v", count, accessTime, err)
 	// >= because this attempt would be over the limit
 	if count >= limit {
-		wait := time.Second*3600 - (time.Since(accessTime))
+		var wait float64
+		if accessTime.Valid {
+			wait = timespan.Seconds() - float64(accessTime.Int64)
+		}
 		return true, wait, nil
 	}
 
 	log.Printf("No problem")
-	return false, time.Second, nil
+	return false, float64(0), nil
 }
 
 // Create -

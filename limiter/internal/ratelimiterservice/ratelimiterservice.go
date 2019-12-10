@@ -22,7 +22,7 @@ func NewRateLimitService(store storage.Store, limit *int, timespan *time.Duratio
 	return r, nil
 }
 
-func (r *RateLimitService) CheckReachedLimit(ip string) (bool, time.Duration, error) {
+func (r *RateLimitService) CheckReachedLimit(ip string) (bool, float64, error) {
 	over, minWait, err := r.store.CreateAndCheck(ip, r.limit, time.Now(), r.timespan)
 
 	return over, minWait, err

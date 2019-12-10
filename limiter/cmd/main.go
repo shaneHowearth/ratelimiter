@@ -112,7 +112,7 @@ func rateLimitandForward(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Rejecting with vals wait: %v", wait)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
-		response, jerr := json.Marshal(map[string]string{"message": fmt.Sprintf("Rate limit exceeded. Try again in %d seconds", wait)})
+		response, jerr := json.Marshal(map[string]string{"message": fmt.Sprintf("Rate limit exceeded. Try again in %f seconds", wait)})
 
 		if jerr != nil {
 			log.Printf("Unable to marshal with error %v", jerr)
