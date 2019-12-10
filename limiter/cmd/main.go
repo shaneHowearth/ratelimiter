@@ -97,28 +97,34 @@ func rateLimitandForward(w http.ResponseWriter, r *http.Request) {
 	// then report not found.
 	log.Print("rateLimitandForward")
 	if r.URL.Path != "/" {
+		// Should never happen
 		log.Printf("Path not found %s", r.URL.Path)
 		http.NotFound(w, r)
 		return
 	}
 
-	log.Print("Checking")
-	// Only support IPv4
+	// Only support IPv4 (IPv6 will have more than 2 ':' chars)
 	address := r.RemoteAddr
 	var pieces []string
 	if strings.Count(address, ":") < 2 {
 		pieces = strings.Split(address, ":")
 	}
-	reject, wait, err := rl.CheckReachedLimit(pieces[0])
 
+	reject, wait, err := rl.CheckReachedLimit(pieces[0])
 	if err != nil {
 		log.Fatalf("CheckReachedLimit returned error %v, unable to continue", err)
 	}
+
+	// Prepare response to client
 	w.Header().Set("Content-Type", "application/json")
 	var response []byte
 	var jerr error
 	if reject {
 		log.Printf("Rejecting with vals wait: %v", wait)
+
+		// Assuming that the HTTP Error code 429 is enough to stop the client from continuing to slam the server
+		// Won't continue to log access attempts, so the wait period is only based on successful connections
+		// To change this, I can add a write method to the ratelimiter and call it here.
 		w.WriteHeader(http.StatusTooManyRequests)
 		response, jerr = json.Marshal(map[string]string{"message": fmt.Sprintf("Rate limit exceeded. Try again in %f seconds", wait)})
 
@@ -126,14 +132,15 @@ func rateLimitandForward(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Unable to marshal with error %v", jerr)
 		}
 	} else {
-		log.Printf("Remote address: %#+v", r.RemoteAddr)
 		w.WriteHeader(http.StatusOK)
+		// Reverse Proxy successful calls to our services
 		// httputil.NewSingleHostReverseProxy(url).ServeHTTP(res, req)
 		response, jerr = json.Marshal(map[string]string{"message": "Just a message to let you know everything is fine. In normal instances this code would reverse proxy successful connections"})
 		if jerr != nil {
 			log.Printf("Unable to marshal with error %v", jerr)
 		}
 	}
+
 	// Write to the client
 	_, err = w.Write(response)
 	if err != nil {

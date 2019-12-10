@@ -75,19 +75,15 @@ func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bo
 		}
 	}
 
-	log.Printf("Looking for %v", timespan)
 	// Get a count of the number of connections stored in the DB for this ip, between now and now - timespan
 	count := 0
-	// var accessTime time.Time
 	var accessTime sql.NullFloat64
-	// current_timestamp-interval '1 hour'
 	err := p.db.QueryRow(`SELECT EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - MIN(access.access_time))), count(*) FROM access WHERE access.ip = $1 AND access.access_time > CURRENT_TIMESTAMP- $2 * INTERVAL '1 SECOND' LIMIT 1`, ip, timespan.Seconds()).Scan(&accessTime, &count)
 	if err != nil {
 		log.Printf("Query generated error %v", err)
 		return true, float64(time.Hour.Seconds()), err
 	}
 
-	log.Printf("Returned count %#v, wait %#v, err %v", count, accessTime, err)
 	// >= because this attempt would be over the limit
 	if count >= limit {
 		var wait float64
@@ -97,7 +93,6 @@ func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bo
 		return true, wait, nil
 	}
 
-	log.Printf("No problem")
 	return false, float64(0), nil
 }
 
@@ -108,9 +103,7 @@ func (p *Datastore) Create(ip string, timestamp time.Time) error {
 			log.Panic("Unable to connect to database, dying")
 		}
 	}
-	log.Printf("Trying to insert %s with %#v", ip, timestamp)
-	rows := p.db.QueryRow(`INSERT INTO access(ip, access_time)
+	p.db.QueryRow(`INSERT INTO access(ip, access_time)
 	VALUES($1, $2)`, ip, timestamp)
-	log.Printf("Rows inserted %#+v", rows)
 	return nil
 }
