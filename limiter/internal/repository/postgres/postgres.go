@@ -76,6 +76,7 @@ func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bo
 		}
 	}
 
+	log.Printf("Looking for %v", timespan)
 	// Get a count of the number of connections stored in the DB for this ip, between now and now - timespan
 	count := 0
 	var accessTime time.Time
