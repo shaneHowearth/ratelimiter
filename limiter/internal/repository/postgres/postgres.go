@@ -83,15 +83,18 @@ func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bo
 	// current_timestamp-interval '1 hour'
 	err := p.db.QueryRow(`SELECT MIN(access.access_time), count(*) FROM access WHERE access.ip = $1 AND access.access_time > CURRENT_TIMESTAMP- $2 * INTERVAL '1 SECOND' LIMIT 1`, ip, timespan.Seconds()).Scan(&accessTime, &count)
 	if err != nil {
+		log.Printf("Query generated error %v", err)
 		return true, time.Hour, err
 	}
 
+	log.Printf("Returned count %#v, wait %d, err %v", count, accessTime, err)
 	// >= because this attempt would be over the limit
 	if count >= limit {
 		wait := time.Second*3600 - (time.Since(accessTime))
 		return true, wait, nil
 	}
 
+	log.Printf("No problem")
 	return false, time.Second, nil
 }
 
