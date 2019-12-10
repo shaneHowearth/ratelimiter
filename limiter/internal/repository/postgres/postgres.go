@@ -6,6 +6,8 @@ import (
 	"log"
 	"math/rand"
 	"time"
+
+	_ "github.com/lib/pq" // Postgres
 )
 
 // Datastore -
@@ -28,11 +30,12 @@ func (p *Datastore) Connect() (err error) {
 		log.Panicf("no Datastore URI configured")
 	}
 
+	log.Printf("Using DB URI: %s", p.URI)
 	// Infinite loop
 	// Keep trying forever
 	for {
 		for i := 0; i < p.Retry; i++ {
-			p.db, err = sqlOpen("datastore", p.URI)
+			p.db, err = sqlOpen("postgres", p.URI)
 			if err == nil {
 				if pingerr := p.db.Ping(); pingerr != nil {
 					log.Printf("Unable to ping database with error %v", pingerr)
@@ -76,7 +79,7 @@ func (p *Datastore) ReachedMax(ip string, limit int, timespan time.Duration) (bo
 	// Get a count of the number of connections stored in the DB for this ip, between now and now - timespan
 	count := 0
 	var accessTime time.Time
-	err := p.db.QueryRow(`SELECT access.access_time, count(*) FROM access WHERE ip = $1 and access_time > time.Now - $2 LIMIT 1`, ip, timespan).Scan(&accessTime, &count)
+	err := p.db.QueryRow(`SELECT MAX(access.access_time), count(*) FROM access WHERE access.ip = $1 and access.access_time > Now() - $2 LIMIT 1`, ip, timespan).Scan(&accessTime, &count)
 	if err != nil {
 		return true, time.Hour, err
 	}
