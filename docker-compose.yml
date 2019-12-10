@@ -11,7 +11,7 @@ services:
         build: limiter/
         environment:
             - DBURI=postgres://accesswriter:hu8jmn3@accessdb:5432/access_postgres_db?sslmode=disable
-            - PORTNUM=5100
+            - PORTNUM=80
             - LIMIT=100
             - TIMESPAN=1h
         ports:
