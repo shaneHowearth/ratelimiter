@@ -109,6 +109,7 @@ func (p *Datastore) Create(ip string, timestamp time.Time) error {
 			log.Panic("Unable to connect to database, dying")
 		}
 	}
+	log.Printf("Trying to insert %s with %#v", ip, timestamp)
 	err := p.db.QueryRow(`INSERT INTO access(ip, access_time)
 	VALUES($1, $2)`, ip, timestamp)
 	if err != nil {
