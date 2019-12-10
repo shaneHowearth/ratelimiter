@@ -6,6 +6,6 @@ CREATE TABLE IF NOT EXISTS access
 (
 	id SERIAL PRIMARY KEY,
 	ip VARCHAR(45),
-	access_time time(6)
+	access_time TIMESTAMPTZ
 );
 ALTER USER accesswriter WITH PASSWORD 'hu8jmn3';
