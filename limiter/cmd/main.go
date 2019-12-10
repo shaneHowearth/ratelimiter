@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"time"
 
 	ratelimiter "github.com/shanehowearth/ratelimiter/limiter/internal/ratelimiterservice"
@@ -103,7 +104,13 @@ func rateLimitandForward(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Print("Checking")
-	reject, wait, err := rl.CheckReachedLimit(r.RemoteAddr)
+	// Only support IPv4
+	address := r.RemoteAddr
+	var pieces []string
+	if strings.Count(address, ":") < 2 {
+		pieces = strings.Split(address, ":")
+	}
+	reject, wait, err := rl.CheckReachedLimit(pieces[0])
 
 	if err != nil {
 		log.Fatalf("CheckReachedLimit returned error %v, unable to continue", err)
